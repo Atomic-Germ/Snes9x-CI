@@ -27,6 +27,29 @@ Recommended steps:
 
 5. Build and run tests. The adapter is compiled into the `snes9x_core` target which your upstream target will be linked with.
 
+6. Automatic fetch-and-build helper
+
+If you want the repository to fetch the upstream Snes9x source and attempt to build it automatically (useful for local testing), a helper script is provided:
+
+  scripts/upstream/fetch_and_build_snes9x.sh
+
+Usage:
+  chmod +x scripts/upstream/fetch_and_build_snes9x.sh
+  ./scripts/upstream/fetch_and_build_snes9x.sh
+
+This script clones the upstream repo (default: https://github.com/snes9xgit/snes9x.git), checks out tag 1.63, and attempts to build it using CMake or other common build systems. It reports any produced static/shared libraries.
+
+After building upstream, rebuild this project with:
+
+  cmake -S . -B build -DUSE_UPSTREAM_CORE=ON
+  cmake --build build
+
+The build will attempt to locate an upstream-built library and create an imported target named `snes9x_upstream` so that the adapter can link to it. If that detection fails you can set `-DSNES9X_UPSTREAM_TARGET=<target>` to point to a target the upstream project provides.
+
+Notes:
+- The helper is conservative and may not succeed for every platform or upstream build system variation — treat it as a convenience step.
+- Preserve upstream licensing and consult their build instructions when required.
+
 Notes and licensing
 - Do NOT add upstream source files into this repository without preserving their license headers and obeying their terms.
 - This project is MIT-licensed; if you include upstream code with a different license, ensure compatibility and attribution as required.
