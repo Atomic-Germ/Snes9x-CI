@@ -65,3 +65,10 @@ jobs:
         with:
           name: build-logs
           path: build
+
+      - name: Upload artifacts on failure
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: build/snes9x-cli
