@@ -1,0 +1,6 @@
+# 240p test suite (PAL) regression script
+set OUTFILE build/regression/240p_pal.jsonl
+load tools/240p_Test_Suite_PAL.sfc
+run 60
+dump-memory 0x200 16
+save-state build/regression/240p_pal.state

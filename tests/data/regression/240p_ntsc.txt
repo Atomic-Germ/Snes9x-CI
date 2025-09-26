@@ -1,0 +1,9 @@
+# 240p test suite (NTSC) regression script
+# Uses the included 240p Test Suite ROM to exercise core rendering and timing.
+# The ROM is open-source; see repository notes for origin.
+set OUTFILE build/regression/240p_ntsc.jsonl
+load tools/240p_Test_Suite_NTSC.sfc
+# Run a short sequence (frames) to exercise the core in CI — increase for longer nightly runs
+run 60
+dump-memory 0x200 16
+save-state build/regression/240p_ntsc.state
