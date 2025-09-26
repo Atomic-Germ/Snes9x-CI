@@ -67,6 +67,15 @@ Exit codes
 
 See `include/exit_codes.h` for the full list. CI should rely on numeric exit codes or the JSON `success` field for machine assertions.
 
+Timestamped logging
+
+- --timestamp
+  When provided, emitted JSON events will include a `timestamp` field with an ISO8601 UTC timestamp at the time of emission. For JSONL/NDJSON outputs this provides easy sorting and ordering in CI log collectors.
+
+JSON schema validation
+
+- Use `tools/json_schema_validate.py <file>` to validate a single JSON document or a JSONL file produced by the CLI against the expected output shape. This tool is lightweight and has no external dependencies.
+
 Examples
 
 Write NDJSON to a file and assert success:
@@ -77,3 +86,8 @@ Write NDJSON to a file and assert success:
   expect-json success true
 
 This will append a JSON line to `OUTFILE` and then verify the last line contains success=true.
+
+Example: validate a produced JSONL
+
+  ./snes9x-cli --run-script tests/data/script_outputfile.txt --format jsonl --output-file build/tests/data/smoke_output.jsonl --timestamp
+  python3 tools/json_schema_validate.py build/tests/data/smoke_output.jsonl

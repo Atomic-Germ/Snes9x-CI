@@ -1,0 +1,6 @@
+# Nightly smoke regression
+# Run a longer smoke test to detect regressions
+load dummy.sfc
+run 5
+dump-memory 0x100 16
+save-state regression-state.bin

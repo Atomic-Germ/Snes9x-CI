@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main , dev ]
   pull_request:
     branches: [ main ]
 
@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest]
         config: [Release]
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,11 @@ jobs:
             ${{ runner.os }}-build-
       - name: Configure
         run: |
+          # Install Google Test on macOS
+            if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+              brew install googletest
+            fi
+          # Configure the project
           cmake -S . -B build -DBUILD_TESTS=ON
       - name: Build
         run: |

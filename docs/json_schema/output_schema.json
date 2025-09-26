@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "snes9x-cli output",
+  "type": "object",
+  "properties": {
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "frames": { "type": "integer", "minimum": 0 },
+    "memory": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+    },
+    "timestamp": { "type": "string", "format": "date-time" }
+  },
+  "required": ["success"]
+}

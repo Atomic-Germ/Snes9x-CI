@@ -1,0 +1,38 @@
+name: Nightly Regression
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache build directory
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: regression-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt') }}
+      - name: Configure
+        run: |
+          cmake -S . -B build -DBUILD_TESTS=ON
+      - name: Build
+        run: |
+          cmake --build build --config Release -- -j 2
+      - name: Run nightly regression scripts
+        run: |
+          chmod +x tools/regression/run_regression.sh
+          tools/regression/run_regression.sh
+      - name: Upload regression outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-regression-outputs
+          path: build/regression
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-logs
+          path: build

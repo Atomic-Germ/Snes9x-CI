@@ -10,6 +10,10 @@
 #include <cctype>
 #include <algorithm>
 #include <map>
+#include <fstream>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 
 using namespace snes9x;
 
@@ -34,6 +38,7 @@ static void print_json_to_stream(std::ostream &o, bool success, const std::strin
     os << "{\"success\":" << (success ? "true" : "false");
     if (!msg.empty()) os << ",\"message\":\"" << msg << "\"";
     if (frames) os << ",\"frames\":" << frames;
+    // timestamp will be inserted by emit_result when enabled
     os << "}";
     o << os.str() << std::endl;
 }
@@ -43,23 +48,51 @@ static void print_jsonl_to_stream(std::ostream &o, bool success, const std::stri
 }
 
 // Wrapper to route output to stdout or a file in the chosen format
+static bool g_timestamped = false;
+
+static std::string now_iso8601() {
+    using namespace std::chrono;
+    auto now = system_clock::now();
+    auto ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
+    std::time_t t = system_clock::to_time_t(now);
+    std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &t);
+#else
+    gmtime_r(&t, &tm);
+#endif
+    char buf[64];
+    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tm);
+    std::ostringstream oss;
+    oss << buf << '.' << std::setw(3) << std::setfill('0') << ms.count() << 'Z';
+    return oss.str();
+}
+
 static int emit_result(OutputFormat fmt, const std::string &out_path, bool success, const std::string &msg = std::string(), int frames = 0) {
     bool to_file = !out_path.empty();
-    if (!to_file) {
-        switch(fmt) {
-            case OutputFormat::PRETTY: print_pretty(std::cout, success, msg, frames); break;
-            case OutputFormat::JSONL: print_jsonl_to_stream(std::cout, success, msg, frames); break;
-            case OutputFormat::JSON: default: print_json_to_stream(std::cout, success, msg, frames); break;
+    auto emit_to_stream = [&](std::ostream &o) {
+        if (fmt == OutputFormat::PRETTY) {
+            print_pretty(o, success, msg, frames);
+            if (g_timestamped) o << "Timestamp: " << now_iso8601() << "\n";
+            return;
         }
+        // For JSON/JSONL build base JSON string, then insert timestamp if requested
+        std::ostringstream base;
+        base << "{\"success\":" << (success ? "true" : "false");
+        if (!msg.empty()) base << ",\"message\":\"" << msg << "\"";
+        if (frames) base << ",\"frames\":" << frames;
+        if (g_timestamped) base << ",\"timestamp\":\"" << now_iso8601() << "\"";
+        base << "}";
+        o << base.str() << std::endl;
+    };
+
+    if (!to_file) {
+        emit_to_stream(std::cout);
         return success ? EXIT_SUCCESSFUL : EXIT_INTERNAL_ERROR;
     }
     std::ofstream fout(out_path, std::ios::app);
     if (!fout.is_open()) return EXIT_INTERNAL_ERROR;
-    switch(fmt) {
-        case OutputFormat::PRETTY: print_pretty(fout, success, msg, frames); break;
-        case OutputFormat::JSONL: print_jsonl_to_stream(fout, success, msg, frames); break;
-        case OutputFormat::JSON: default: print_json_to_stream(fout, success, msg, frames); break;
-    }
+    emit_to_stream(fout);
     return success ? EXIT_SUCCESSFUL : EXIT_INTERNAL_ERROR;
 }
 
@@ -79,6 +112,13 @@ static std::string substitute_vars(const std::string &s, const std::map<std::str
         out.push_back(s[i]);
     }
     return out;
+}
+
+static std::string trim(const std::string &s) {
+    auto b = s.find_first_not_of(" \t\r\n");
+    if (b == std::string::npos) return std::string();
+    auto e = s.find_last_not_of(" \t\r\n");
+    return s.substr(b, e - b + 1);
 }
 
 static void print_usage() {
@@ -191,25 +231,22 @@ int main(int argc, char **argv) {
         if (a == "--json-output") { json_output = true; continue; }
         if (a == "--format" && i + 1 < args.size()) { out_format = parse_format(args[++i]); continue; }
         if (a == "--output-file" && i + 1 < args.size()) { output_file = args[++i]; continue; }
+        if (a == "--timestamp" || a == "--timestamped") { g_timestamped = true; continue; }
         if (a == "--load" && i + 1 < args.size()) { rom_path = args[++i]; continue; }
-        if (a == "--run") { do_run = true; if (i + 1 < args.size()) {
-            // optional frames
-            try { run_frames = std::stoul(args[i + 1]); i++; }
-            catch(...) { run_frames = 0; }
-            }
-            continue;
-        }
+        if (a == "--run") { do_run = true; if (i + 1 < args.size()) { try { run_frames = std::stoul(args[i + 1]); i++; } catch(...) { run_frames = 0; } } continue; }
         if (a == "--step") { do_step = true; continue; }
         if (a == "--reset") { do_reset = true; continue; }
         if (a == "--save-state" && i + 1 < args.size()) { save_path = args[++i]; continue; }
         if (a == "--load-state" && i + 1 < args.size()) { load_state_path = args[++i]; continue; }
-        if (a == "--dump-memory" && i + 2 < args.size()) {
-            do_dump = true; dump_addr = std::stoull(args[++i], nullptr, 0); dump_len = std::stoul(args[++i]); continue; }
+        if (a == "--dump-memory" && i + 2 < args.size()) { do_dump = true; dump_addr = std::stoull(args[++i], nullptr, 0); dump_len = std::stoul(args[++i]); continue; }
         if (a == "--run-script" && i + 1 < args.size()) { script_path = args[++i]; continue; }
         std::cerr << "Unknown option: " << a << "\n";
         print_usage();
         return 2;
     }
+
+    // If the user requested a JSON-like format, enable json_output implicitly
+    if (out_format == OutputFormat::JSON || out_format == OutputFormat::JSONL) json_output = true;
 
     Core core;
     // If a run-script was specified, execute it using the same Core instance and exit

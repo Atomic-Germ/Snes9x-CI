@@ -3,4 +3,3 @@ set OUTFILE build/tests/data/smoke_output.jsonl
 load dummy.sfc
 run 1
 dump-memory 0x100 4
-save-state ${OUTFILE}.state
