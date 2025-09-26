@@ -36,6 +36,13 @@ if(USE_UPSTREAM_CORE)
     add_library(snes9x_core STATIC core_adapter.cpp)
   endif()
 
+  # If an upstream shim implementation exists, compile it into our core target so
+  # the adapter can call the C-style entry points provided by the shim.
+  if(EXISTS ${CMAKE_SOURCE_DIR}/src/core/upstream/shim_impl.cpp)
+    message(STATUS "Found upstream shim implementation; adding shim_impl.cpp to snes9x_core sources")
+    target_sources(snes9x_core PRIVATE ${CMAKE_SOURCE_DIR}/src/core/upstream/shim_impl.cpp)
+  endif()
+
   target_include_directories(snes9x_core
     PUBLIC
       ${CMAKE_SOURCE_DIR}/include
