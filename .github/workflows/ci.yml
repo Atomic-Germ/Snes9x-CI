@@ -34,6 +34,13 @@ jobs:
       - name: Build
         run: |
           cmake --build build --config ${{ matrix.config }} -- -j 2
+      - name: Install
+        run: |
+          cmake --install build --prefix build/install || true
+      - name: List install artifacts (diagnostic)
+        run: |
+          echo "Contents of build/install/bin:"
+          ls -la build/install/bin || true
       - name: List build artifacts (diagnostic)
         run: |
           echo "Contents of build tree:"
@@ -43,7 +50,11 @@ jobs:
           ctest --test-dir build --output-on-failure
       - name: Run headless CLI smoke test
         run: |
-          CLI="build/snes9x-cli"
+          # Prefer the installed binary when available for deterministic pathing
+          CLI="build/install/bin/snes9x-cli"
+          if [ ! -x "$CLI" ]; then
+            CLI="build/snes9x-cli"
+          fi
           if [ ! -x "$CLI" ]; then
             CLI="build/src/cli/snes9x-cli"
           fi
@@ -75,12 +86,11 @@ jobs:
             build/**/snes9x-cli*
             build/**/*.log
             build/**/*.txt
-      - name: Upload snes9x-cli binary (always)
+      - name: Upload install tree (always)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: snes9x-cli-binaries
+          name: install-tree
           path: |
-            build/**/snes9x-cli
-            build/**/snes9x-cli*
-            build/src/cli/snes9x-cli
+            build/install
+            build/install/**
