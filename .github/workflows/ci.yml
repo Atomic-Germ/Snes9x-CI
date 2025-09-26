@@ -15,6 +15,11 @@ jobs:
         config: [Release]
     steps:
       - uses: actions/checkout@v4
+      - name: "Diagnostic: git and environment"
+        run: |
+          git --version || true
+          uname -a || true
+          echo "Runner OS: ${{ runner.os }}"
       - name: Cache build directory
         uses: actions/cache@v4
         with:
@@ -24,15 +29,15 @@ jobs:
             ${{ runner.os }}-build-
       - name: Configure
         run: |
-          # Install Google Test on macOS
-            if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-              brew install googletest
-            fi
-          # Configure the project
-          cmake -S . -B build -DBUILD_TESTS=ON
+          # Configure the project. Disable fetching googletest in CI to avoid network/git issues on runners
+          cmake -S . -B build -DBUILD_TESTS=ON -DDOWNLOAD_GTEST=OFF
       - name: Build
         run: |
           cmake --build build --config ${{ matrix.config }} -- -j 2
+      - name: List build artifacts (diagnostic)
+        run: |
+          echo "Contents of build tree:"
+          find build -maxdepth 4 -type f -print || true
       - name: Run unit tests
         run: |
           ctest --test-dir build --output-on-failure
@@ -64,11 +69,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-logs
-          path: build
-
-      - name: Upload artifacts on failure
-        if: success()
+          path: |
+            build
+            build/**/snes9x-cli
+            build/**/snes9x-cli*
+            build/**/*.log
+            build/**/*.txt
+      - name: Upload snes9x-cli binary (always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: binary
-          path: build/snes9x-cli
+          name: snes9x-cli-binaries
+          path: |
+            build/**/snes9x-cli
+            build/**/snes9x-cli*
+            build/src/cli/snes9x-cli
