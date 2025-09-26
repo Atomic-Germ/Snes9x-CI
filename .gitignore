@@ -1,0 +1,23 @@
+# Build artifacts
+/build/
+/*.obj
+/*.o
+/*.exe
+/*.lib
+/*.dll
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# VSCode
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Test artifacts
+/test-output/

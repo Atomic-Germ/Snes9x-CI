@@ -1,0 +1,5 @@
+# Example script for headless smoke testing
+load dummy.sfc
+run 1
+dump-memory 0x100 8
+save-state smoke-state.bin

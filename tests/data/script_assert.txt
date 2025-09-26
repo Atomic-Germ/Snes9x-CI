@@ -1,0 +1,6 @@
+# Script that emits JSON to a file and asserts success via expect-json
+set OUTFILE build/tests/data/assert_output.jsonl
+load dummy.sfc
+run 1
+# Expect that the last emitted JSON contains success=true
+expect-json success true

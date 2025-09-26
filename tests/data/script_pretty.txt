@@ -1,0 +1,6 @@
+# Script demonstrating pretty output and variables
+set OUTFILE pretty-output.txt
+load ${OUTFILE}
+# Note: here we intentionally "load" a filename variable for demonstration; real usage would load a ROM path
+run 1
+save-state ${OUTFILE}.state
