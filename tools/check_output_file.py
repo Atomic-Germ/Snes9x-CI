@@ -28,9 +28,13 @@ except Exception as e:
 if len(sys.argv) >= 4:
     key = sys.argv[2]
     expected = sys.argv[3]
-    actual = str(obj.get(key))
-    if actual != expected:
-        print(f'Assertion failed: key {key} expected {expected} actual {actual}')
+    actual = obj.get(key)
+    if isinstance(actual, bool):
+        actual_str = 'true' if actual else 'false'
+    else:
+        actual_str = str(actual)
+    if actual_str.lower() != expected.lower():
+        print(f'Assertion failed: key {key} expected {expected} actual {actual_str}')
         sys.exit(6)
 
 print('OK')
