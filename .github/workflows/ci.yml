@@ -38,11 +38,27 @@ jobs:
           ctest --test-dir build --output-on-failure
       - name: Run headless CLI smoke test
         run: |
-          python3 tools/ci_smoke_test.py build/snes9x-cli build/tests/data/dummy.sfc
+          CLI="build/snes9x-cli"
+          if [ ! -x "$CLI" ]; then
+            CLI="build/src/cli/snes9x-cli"
+          fi
+          if [ ! -x "$CLI" ]; then
+            echo "CLI binary not found: $CLI"
+            exit 2
+          fi
+          python3 tools/ci_smoke_test.py "$CLI" build/tests/data/dummy.sfc
       - name: Print smoke test output
         if: success()
         run: |
-          build/snes9x-cli --load build/tests/data/dummy.sfc --run 1 --json-output
+          CLI="build/snes9x-cli"
+          if [ ! -x "$CLI" ]; then
+            CLI="build/src/cli/snes9x-cli"
+          fi
+          if [ -x "$CLI" ]; then
+            "$CLI" --load build/tests/data/dummy.sfc --run 1 --json-output
+          else
+            echo "No CLI binary found to print smoke test output"
+          fi
       - name: Upload artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
